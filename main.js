@@ -256,6 +256,100 @@
     });
   })();
 
+  /* work-with-us: option cards + conditional fields + client inquiry form */
+  (function clientInquiry(){
+    var group = document.getElementById('inquiryTypeGroup');
+    if(!group) return;
+    var radios = group.querySelectorAll('input[name="inquiryType"]');
+    var staffingExtra = document.getElementById('staffingExtra');
+    var typeMap = { staffing:'Hire developers', custom:'Build custom software', ai:'AI / ML solution', salesforce:'Salesforce support' };
+
+    function updateStaffingVisibility(){
+      var checked = group.querySelector('input[name="inquiryType"]:checked');
+      var isStaffing = !!checked && checked.value === typeMap.staffing;
+      if(staffingExtra){
+        staffingExtra.classList.toggle('show', isStaffing);
+        staffingExtra.querySelectorAll('input').forEach(function(inp){ inp.required = isStaffing; });
+      }
+      return isStaffing;
+    }
+
+    radios.forEach(function(r){
+      r.addEventListener('change', function(){
+        updateStaffingVisibility();
+        var target = document.getElementById('inquiryFormFields');
+        if(target){ target.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block:'start'}); }
+      });
+    });
+
+    try{
+      var params = new URLSearchParams(window.location.search);
+      var typeParam = params.get('type');
+      if(typeParam && typeMap[typeParam]){
+        for(var i=0;i<radios.length;i++){
+          if(radios[i].value === typeMap[typeParam]){ radios[i].checked = true; break; }
+        }
+      }
+    }catch(e){}
+    updateStaffingVisibility();
+
+    var form = document.getElementById('clientInquiryForm');
+    if(!form) return;
+    var success = document.getElementById('inquirySuccess');
+    var errMsg = document.getElementById('inquiryErr');
+    var submitBtn = form.querySelector('button[type=submit]');
+
+    function setInvalid(name, invalid){
+      var field = form.querySelector('[data-field="' + name + '"]');
+      if(field) field.classList.toggle('invalid', invalid);
+    }
+    function phoneValid(v){ return /^[0-9+\-\s()]{7,16}$/.test(v.trim()); }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      if(errMsg) errMsg.classList.remove('show');
+      var checked = form.querySelector('input[name="inquiryType"]:checked');
+      var company = form.company.value.trim();
+      var contactPerson = form.contactPerson.value.trim();
+      var email = form.email.value.trim();
+      var phone = form.phone.value.trim();
+      var description = form.description.value.trim();
+      var consentOk = form.consent && form.consent.checked;
+      var isStaffing = updateStaffingVisibility();
+
+      var ok = true;
+      function mark(field, bad){ setInvalid(field, bad); if(bad) ok = false; }
+
+      mark('inquiryType', !checked);
+      mark('company', !company);
+      mark('contactPerson', !contactPerson);
+      mark('email', !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+      mark('phone', !phoneValid(phone));
+      mark('description', description.length < 10);
+      mark('timeline', !form.timeline.value);
+      if(isStaffing){
+        mark('rolesNeeded', !form.rolesNeeded.value.trim());
+        mark('numPositions', !form.numPositions.value);
+      }
+      mark('consent', !consentOk);
+
+      if(!ok){
+        var firstInvalid = form.querySelector('.field.invalid');
+        if(firstInvalid){ firstInvalid.scrollIntoView({behavior: reduceMotion ? 'auto' : 'smooth', block:'center'}); }
+        return;
+      }
+
+      if(submitBtn) submitBtn.disabled = true;
+      submitToNetlify(form, function(){
+        form.style.display = 'none';
+        success.classList.add('show');
+      }, function(){
+        if(submitBtn) submitBtn.disabled = false;
+        if(errMsg) errMsg.classList.add('show');
+      });
+    });
+  })();
+
   var yearEl = document.getElementById('year');
   if(yearEl) yearEl.textContent = new Date().getFullYear();
 })();
