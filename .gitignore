@@ -7,3 +7,8 @@ Desktop.ini
 # Editor folders
 .vscode/
 .idea/
+
+# Logo working files not used by the live site
+assets/logo/logo-original.png
+assets/logo/favicon-preview.png
+assets/logo/*.webp
